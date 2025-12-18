@@ -68,8 +68,8 @@ def load_model_from_drive(model_type):
 def preprocess_image(uploaded_file, target_size=(224, 224), scale=True):
     """
     Resizes the image.
-    scale=True: Divides by 255 (for Skin/Chest models).
-    scale=False: Keeps raw pixels 0-255 (for Eye model).
+    scale=True: Divides by 255 (for Skin models).
+    scale=False: Keeps raw pixels 0-255 (for Eye/Chest models).
     """
     image = Image.open(uploaded_file).convert('RGB')
     st.image(image, caption="Patient Scan", width=300)
@@ -143,8 +143,8 @@ elif "Chest" in app_mode:
     uploaded_file = st.file_uploader("Upload Chest X-Ray", type=["jpg", "png", "jpeg"])
     
     if uploaded_file and model:
-        # Chest: 224x224, Normalized
-        processed_img = preprocess_image(uploaded_file, target_size=(224, 224), scale=True)
+        # Chest: 224x224, Raw Pixels (scale=False)
+        processed_img = preprocess_image(uploaded_file, target_size=(224, 224), scale=False)
         
         if st.button("Analyze X-Ray"):
             with st.spinner("Scanning Lungs..."):
@@ -179,7 +179,7 @@ elif "Skin" in app_mode:
     uploaded_file = st.file_uploader("Upload Burn Image", type=["jpg", "png", "jpeg"])
     
     if uploaded_file and model:
-        # Skin: 224x224, Normalized
+        # Skin: 224x224, Normalized (scale=True)
         processed_img = preprocess_image(uploaded_file, target_size=(224, 224), scale=True)
         
         if st.button("Analyze Burn"):
