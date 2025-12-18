@@ -25,25 +25,17 @@ st.markdown("""
 st.markdown('<div class="main-title">🏥 Health Vision Hub</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">AI-Powered Multi-Disease Diagnosis System</div>', unsafe_allow_html=True)
 
-# --- 1. MODEL LINKS (PASTE YOUR LINKS HERE) ---
+# --- 1. MODEL LINKS ---
 MODEL_LINKS = {
-    # Replace these strings with your actual Google Drive Share Links
     "eye": "https://drive.google.com/file/d/1a4xISBHgmdG7wRcd5vui9F4vjocFYh7k/view?usp=drivesdk",
     "chest": "https://drive.google.com/file/d/1M1V7nCc6-lj8cqrhy0D4fQxW8hQ0mmHy/view?usp=drivesdk",
     "skin": "https://drive.google.com/file/d/1HdqtSAFEhHP0pIITgOo0Ncpp_vltS-qc/view?usp=drivesdk"
 }
 
 # --- 2. CLASS LABELS ---
-# Eye: Standard 5 stages. Logic: Index 0 is Healthy, 1-4 are Sick
 EYE_CLASSES = ['No_DR', 'Mild', 'Moderate', 'Severe', 'Proliferate_DR']
-
-# Chest: Your "Big 5"
 CHEST_CLASSES = ['Atelectasis', 'Effusion', 'Infiltration', 'No Finding', 'Nodule']
-
-# Skin Burn: 3 Classes
 SKIN_CLASSES = ['1st Degree Burn', '2nd Degree Burn', '3rd Degree Burn']
-
-IMG_SIZE = 224
 
 # --- 3. HELPER FUNCTIONS ---
 
@@ -72,12 +64,15 @@ def load_model_from_drive(model_type):
         st.error(f"Failed to load model: {e}")
         return None
 
-def preprocess_image(uploaded_file):
+# --- MODIFIED: Accepts target_size ---
+def preprocess_image(uploaded_file, target_size=(224, 224)):
     """Resizes and normalizes the image for B3 models."""
     image = Image.open(uploaded_file).convert('RGB')
     st.image(image, caption="Patient Scan", width=300) # Show image
     
-    image = image.resize((IMG_SIZE, IMG_SIZE))
+    # Resize to the specific target size required by the model
+    image = image.resize(target_size)
+    
     img_array = np.array(image)
     img_array = img_array / 255.0  # Normalize [0,1]
     img_array = np.expand_dims(img_array, axis=0) # Batch dimension
@@ -103,7 +98,8 @@ if "Eye" in app_mode:
     uploaded_file = st.file_uploader("Upload Eye Image", type=["jpg", "png", "jpeg"])
     
     if uploaded_file and model:
-        processed_img = preprocess_image(uploaded_file)
+        # FIX: Force 300x300 for Eye Model
+        processed_img = preprocess_image(uploaded_file, target_size=(300, 300))
         
         if st.button("Analyze Eye"):
             with st.spinner("Analyzing Retina..."):
@@ -135,7 +131,8 @@ elif "Chest" in app_mode:
     uploaded_file = st.file_uploader("Upload Chest X-Ray", type=["jpg", "png", "jpeg"])
     
     if uploaded_file and model:
-        processed_img = preprocess_image(uploaded_file)
+        # Use 224x224 for Chest
+        processed_img = preprocess_image(uploaded_file, target_size=(224, 224))
         
         if st.button("Analyze X-Ray"):
             with st.spinner("Scanning Lungs..."):
@@ -143,11 +140,6 @@ elif "Chest" in app_mode:
                 prediction = model.predict(processed_img)[0]
                 
                 st.markdown("### Diagnosis Report")
-                
-                # We interpret the Big 5
-                # prediction order corresponds to alphabetic order of classes usually, 
-                # OR the order you defined in training. 
-                # Assuming standard order: Atelectasis, Effusion, Infiltration, No Finding, Nodule
                 
                 found_disease = False
                 
@@ -178,7 +170,8 @@ elif "Skin" in app_mode:
     uploaded_file = st.file_uploader("Upload Burn Image", type=["jpg", "png", "jpeg"])
     
     if uploaded_file and model:
-        processed_img = preprocess_image(uploaded_file)
+        # Use 224x224 for Skin
+        processed_img = preprocess_image(uploaded_file, target_size=(224, 224))
         
         if st.button("Analyze Burn"):
             with st.spinner("Analyzing Tissue Damage..."):
@@ -195,7 +188,7 @@ elif "Skin" in app_mode:
                 
                 st.markdown("#### 🚑 First Aid Advice:")
                 if predicted_class_index == 0: # 1st Degree
-                    st.info("cool the burn with cool (not cold) running water. Apply aloe vera or lotion. Do not use ice.")
+                    st.info("Cool the burn with cool (not cold) running water. Apply aloe vera or lotion. Do not use ice.")
                 elif predicted_class_index == 1: # 2nd Degree
                     st.warning("Cool the area. **Do not break blisters.** Apply antibiotic ointment and cover loosely with gauze.")
                 elif predicted_class_index == 2: # 3rd Degree
